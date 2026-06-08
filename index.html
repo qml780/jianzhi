@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>剪纸窗花</title>
+  <style>
+    :root {
+      --paper: #d62727;
+      --paper-dark: #971717;
+      --ink: #2c1b17;
+      --muted: #76645f;
+      --gold: #f1c15b;
+      --jade: #0f8277;
+      --rice: #fff8e8;
+      --panel: rgba(255, 253, 248, 0.92);
+      --line: rgba(93, 49, 39, 0.17);
+      --shadow: 0 22px 55px rgba(99, 25, 20, 0.17);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Serif SC", serif;
+      background:
+        linear-gradient(120deg, rgba(255, 255, 255, 0.78), rgba(255, 248, 231, 0.86)),
+        radial-gradient(circle at 14px 14px, rgba(214, 39, 39, 0.1) 2px, transparent 2px);
+      background-size: auto, 28px 28px;
+    }
+
+    .app {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 22px;
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 8px 0 20px;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--paper-dark);
+      font-size: clamp(2rem, 5vw, 4.2rem);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .status {
+      max-width: 380px;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.76);
+      color: var(--muted);
+      font-size: 0.92rem;
+      text-align: right;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(320px, 680px) minmax(280px, 1fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border: 1px solid rgba(151, 23, 23, 0.2);
+      border-radius: 8px;
+      background:
+        linear-gradient(45deg, rgba(255, 255, 255, 0.72), rgba(255, 248, 231, 0.78)),
+        radial-gradient(circle at center, rgba(241, 193, 91, 0.16), transparent 58%);
+      box-shadow: var(--shadow);
+      touch-action: none;
+    }
+
+    canvas,
+    video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #paperCanvas {
+      z-index: 2;
+      cursor: crosshair;
+    }
+
+    #overlayCanvas {
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    #webcam {
+      opacity: 0;
+      pointer-events: none;
+      transform: scaleX(-1);
+    }
+
+    .badge {
+      position: absolute;
+      z-index: 4;
+      left: 50%;
+      top: 14px;
+      transform: translateX(-50%);
+      width: max-content;
+      max-width: calc(100% - 28px);
+      padding: 8px 13px;
+      border-radius: 8px;
+      background: rgba(15, 130, 119, 0.94);
+      color: #fff;
+      font-size: 0.9rem;
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.12);
+    }
+
+    .side {
+      display: grid;
+      gap: 14px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 16px;
+      box-shadow: 0 12px 30px rgba(91, 49, 39, 0.08);
+    }
+
+    .panel h2 {
+      margin: 0 0 13px;
+      color: var(--paper-dark);
+      font-size: 1.05rem;
+      letter-spacing: 0;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    select,
+    input[type="range"] {
+      width: 100%;
+    }
+
+    select {
+      padding: 9px 10px;
+      border: 1px solid rgba(151, 23, 23, 0.28);
+      border-radius: 8px;
+      background: white;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    input[type="range"] {
+      accent-color: var(--paper);
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    button {
+      min-height: 42px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.16s ease, background 0.16s ease;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .primary {
+      background: var(--paper);
+      color: white;
+      box-shadow: 0 10px 18px rgba(214, 39, 39, 0.22);
+    }
+
+    .primary:hover {
+      background: var(--paper-dark);
+    }
+
+    .secondary {
+      background: white;
+      color: var(--paper-dark);
+      border-color: rgba(151, 23, 23, 0.3);
+    }
+
+    .secondary:hover {
+      background: #fff1ec;
+    }
+
+    .ghost {
+      background: rgba(15, 130, 119, 0.1);
+      color: var(--jade);
+      border-color: rgba(15, 130, 119, 0.24);
+    }
+
+    .history {
+      display: flex;
+      gap: 10px;
+      min-height: 88px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .empty {
+      width: 100%;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+    }
+
+    .thumb {
+      position: relative;
+      flex: 0 0 78px;
+      width: 78px;
+      height: 78px;
+      padding: 0;
+      overflow: hidden;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      background: white;
+    }
+
+    .thumb.active {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(241, 193, 91, 0.36);
+    }
+
+    .thumb canvas {
+      display: block;
+      position: static;
+      width: 100%;
+      height: 100%;
+    }
+
+    .delete {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      min-height: 0;
+      padding: 0;
+      border-radius: 999px;
+      background: rgba(44, 27, 23, 0.78);
+      color: white;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .tips {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    .tips p {
+      margin: 0;
+    }
+
+    @media (max-width: 880px) {
+      header,
+      main {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .status {
+        max-width: none;
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .app {
+        padding: 14px;
+      }
+
+      .button-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>剪纸窗花</h1>
+        <p class="subtitle">先在折起来的一小片纸上剪，展开后生成完整窗花。</p>
+      </div>
+      <div class="status">折叠态只剪红色折纸片；展开态按折线翻折复制。</div>
+    </header>
+
+    <main>
+      <section class="stage" aria-label="剪纸画布">
+        <video id="webcam" autoplay playsinline muted></video>
+        <canvas id="paperCanvas"></canvas>
+        <canvas id="overlayCanvas"></canvas>
+        <div id="feedback" class="badge">折叠态：只在红色折纸片里剪</div>
+      </section>
+
+      <aside class="side">
+        <section class="panel">
+          <h2>工具</h2>
+          <div class="field">
+            <label for="foldCount">展开瓣数</label>
+            <select id="foldCount">
+              <option value="4">4 瓣</option>
+              <option value="6">6 瓣</option>
+              <option value="8" selected>8 瓣</option>
+              <option value="12">12 瓣</option>
+              <option value="16">16 瓣</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="brushSize">剪刀大小：<span id="brushValue">20</span> px</label>
+            <input id="brushSize" type="range" min="5" max="56" step="1" value="20" />
+          </div>
+          <div class="button-row">
+            <button id="toggleView" class="primary">展开作品</button>
+            <button id="reset" class="secondary">重新开始</button>
+            <button id="saveImage" class="secondary">保存图片</button>
+            <button id="toggleGesture" class="ghost">手势模式</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>历史记录</h2>
+          <div id="history" class="history"></div>
+          <div class="button-row">
+            <button id="saveState" class="secondary">保存当前状态</button>
+            <button id="clearHistory" class="secondary">清空历史</button>
+          </div>
+        </section>
+
+        <section class="panel tips">
+          <p>折叠态：屏幕上只有一片扇形折纸，剪口只会落在这片纸上。</p>
+          <p>展开态：系统把这片纸按折线反复翻开，形成完整窗花。</p>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script type="module">
+    const paperCanvas = document.getElementById("paperCanvas");
+    const overlayCanvas = document.getElementById("overlayCanvas");
+    const video = document.getElementById("webcam");
+    const feedback = document.getElementById("feedback");
+    const paperCtx = paperCanvas.getContext("2d");
+    const overlayCtx = overlayCanvas.getContext("2d");
+
+    const state = {
+      size: 600,
+      foldCount: 8,
+      brushSize: 20,
+      unfolded: false,
+      cutting: false,
+      last: null,
+      history: [],
+      historyIndex: -1,
+      gestureEnabled: false,
+      handLandmarker: null,
+      cursor: { x: 300, y: 300 },
+      target: { x: 300, y: 300 },
+      cutCanvas: document.createElement("canvas")
+    };
+
+    const cutCtx = state.cutCanvas.getContext("2d");
+
+    function center() {
+      return { x: state.size / 2, y: state.size / 2 };
+    }
+
+    function radius() {
+      return state.size * 0.42;
+    }
+
+    function sectorAngle() {
+      return (Math.PI * 2) / state.foldCount;
+    }
+
+    function foldStartAngle() {
+      return -Math.PI / 2;
+    }
+
+    function wedgePath(ctx, pad = 0) {
+      const c = center();
+      const r = radius() + pad;
+      const start = foldStartAngle();
+      const end = start + sectorAngle();
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y);
+      ctx.lineTo(c.x + Math.cos(start) * r, c.y + Math.sin(start) * r);
+      ctx.arc(c.x, c.y, r, start, end, false);
+      ctx.closePath();
+    }
+
+    function insideFoldedPaper(x, y) {
+      const c = center();
+      const dx = x - c.x;
+      const dy = y - c.y;
+      const r = Math.hypot(dx, dy);
+      if (r > radius()) return false;
+      let a = Math.atan2(dy, dx) - foldStartAngle();
+      a = Math.atan2(Math.sin(a), Math.cos(a));
+      return a >= 0 && a <= sectorAngle();
+    }
+
+    function resizeCanvas() {
+      const size = Math.round(paperCanvas.getBoundingClientRect().width);
+      const oldCuts = document.createElement("canvas");
+      oldCuts.width = state.cutCanvas.width || size;
+      oldCuts.height = state.cutCanvas.height || size;
+      oldCuts.getContext("2d").drawImage(state.cutCanvas, 0, 0);
+
+      state.size = size;
+      for (const canvas of [paperCanvas, overlayCanvas, state.cutCanvas]) {
+        canvas.width = size;
+        canvas.height = size;
+      }
+      cutCtx.drawImage(oldCuts, 0, 0, size, size);
+      render();
+    }
+
+    function drawBackground() {
+      paperCtx.clearRect(0, 0, state.size, state.size);
+      paperCtx.fillStyle = "#fff9e9";
+      paperCtx.fillRect(0, 0, state.size, state.size);
+      paperCtx.fillStyle = "rgba(151, 23, 23, 0.045)";
+      for (let y = 18; y < state.size; y += 28) {
+        for (let x = 18; x < state.size; x += 28) {
+          paperCtx.beginPath();
+          paperCtx.arc(x, y, 1.4, 0, Math.PI * 2);
+          paperCtx.fill();
+        }
+      }
+    }
+
+    function render() {
+      drawBackground();
+      if (state.unfolded) {
+        renderUnfolded();
+      } else {
+        renderFolded();
+      }
+    }
+
+    function drawPaperTexture(ctx) {
+      ctx.save();
+      ctx.globalCompositeOperation = "source-atop";
+      ctx.strokeStyle = "rgba(255,255,255,0.08)";
+      ctx.lineWidth = 1;
+      for (let y = 10; y < state.size; y += 18) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(state.size, y + Math.sin(y) * 5);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function renderFolded() {
+      paperCtx.save();
+      paperCtx.shadowColor = "rgba(105, 23, 19, 0.24)";
+      paperCtx.shadowBlur = 24;
+      paperCtx.shadowOffsetY = 12;
+      wedgePath(paperCtx, 0);
+      paperCtx.fillStyle = "#d62727";
+      paperCtx.fill();
+      paperCtx.restore();
+
+      paperCtx.save();
+      wedgePath(paperCtx, 0);
+      paperCtx.clip();
+      paperCtx.globalCompositeOperation = "destination-out";
+      paperCtx.drawImage(state.cutCanvas, 0, 0);
+      paperCtx.globalCompositeOperation = "source-over";
+      drawPaperTexture(paperCtx);
+      paperCtx.restore();
+
+      drawFoldLines();
+      drawFoldedLabels();
+    }
+
+    function renderUnfolded() {
+      const c = center();
+      const r = radius();
+      paperCtx.save();
+      paperCtx.beginPath();
+      paperCtx.arc(c.x, c.y, r, 0, Math.PI * 2);
+      paperCtx.fillStyle = "#d62727";
+      paperCtx.shadowColor = "rgba(105, 23, 19, 0.22)";
+      paperCtx.shadowBlur = 24;
+      paperCtx.shadowOffsetY = 10;
+      paperCtx.fill();
+      paperCtx.restore();
+
+      paperCtx.save();
+      paperCtx.beginPath();
+      paperCtx.arc(c.x, c.y, r, 0, Math.PI * 2);
+      paperCtx.clip();
+      paperCtx.globalCompositeOperation = "destination-out";
+      for (let i = 0; i < state.foldCount; i += 1) {
+        paperCtx.save();
+        paperCtx.translate(c.x, c.y);
+        if (i % 2 === 0) {
+          paperCtx.rotate(i * sectorAngle());
+        } else {
+          const mirrorAxis = foldStartAngle() + ((i + 1) * sectorAngle()) / 2;
+          paperCtx.rotate(mirrorAxis);
+          paperCtx.scale(1, -1);
+          paperCtx.rotate(-mirrorAxis);
+        }
+        paperCtx.translate(-c.x, -c.y);
+        paperCtx.drawImage(state.cutCanvas, 0, 0);
+        paperCtx.restore();
+      }
+      paperCtx.globalCompositeOperation = "source-over";
+      drawPaperTexture(paperCtx);
+      paperCtx.restore();
+
+      paperCtx.save();
+      paperCtx.strokeStyle = "rgba(255, 215, 120, 0.34)";
+      paperCtx.lineWidth = 1;
+      paperCtx.setLineDash([6, 7]);
+      for (let i = 0; i < state.foldCount; i += 1) {
+        const a = foldStartAngle() + i * sectorAngle();
+        paperCtx.beginPath();
+        paperCtx.moveTo(c.x, c.y);
+        paperCtx.lineTo(c.x + Math.cos(a) * r, c.y + Math.sin(a) * r);
+        paperCtx.stroke();
+      }
+      paperCtx.restore();
+    }
+
+    function drawFoldLines() {
+      const c = center();
+      const r = radius();
+      const start = foldStartAngle();
+      const end = start + sectorAngle();
+
+      paperCtx.save();
+      paperCtx.strokeStyle = "rgba(255, 228, 130, 0.92)";
+      paperCtx.lineWidth = 1.5;
+      paperCtx.setLineDash([7, 7]);
+      for (const a of [start, end]) {
+        paperCtx.beginPath();
+        paperCtx.moveTo(c.x, c.y);
+        paperCtx.lineTo(c.x + Math.cos(a) * r, c.y + Math.sin(a) * r);
+        paperCtx.stroke();
+      }
+      paperCtx.setLineDash([]);
+      wedgePath(paperCtx, 0);
+      paperCtx.strokeStyle = "rgba(87, 10, 10, 0.24)";
+      paperCtx.lineWidth = 2;
+      paperCtx.stroke();
+      paperCtx.restore();
+    }
+
+    function drawFoldedLabels() {
+      const c = center();
+      paperCtx.save();
+      paperCtx.fillStyle = "rgba(44, 27, 23, 0.58)";
+      paperCtx.font = `${Math.max(12, state.size * 0.023)}px Microsoft YaHei, sans-serif`;
+      paperCtx.textAlign = "center";
+      paperCtx.fillText("折叠后的纸片", c.x, c.y + radius() * 0.18);
+      paperCtx.restore();
+    }
+
+    function cutAt(x, y) {
+      if (!state.cutting || !state.last) return;
+      cutCtx.save();
+      wedgePath(cutCtx, 0);
+      cutCtx.clip();
+      cutCtx.strokeStyle = "#000";
+      cutCtx.lineWidth = state.brushSize;
+      cutCtx.lineCap = "round";
+      cutCtx.lineJoin = "round";
+      cutCtx.beginPath();
+      cutCtx.moveTo(state.last.x, state.last.y);
+      cutCtx.lineTo(x, y);
+      cutCtx.stroke();
+      cutCtx.restore();
+      state.last = { x, y };
+      render();
+    }
+
+    function pointFromEvent(event) {
+      const rect = paperCanvas.getBoundingClientRect();
+      return {
+        x: (event.clientX - rect.left) * (state.size / rect.width),
+        y: (event.clientY - rect.top) * (state.size / rect.height)
+      };
+    }
+
+    function startCut(point) {
+      if (state.unfolded || !insideFoldedPaper(point.x, point.y)) {
+        setFeedback(state.unfolded ? "请先切回折叠态再剪" : "剪刀要落在红色折纸片里");
+        return;
+      }
+      state.cutting = true;
+      state.last = point;
+      cutAt(point.x, point.y);
+    }
+
+    function endCut() {
+      state.cutting = false;
+      state.last = null;
+    }
+
+    function resetPaper() {
+      cutCtx.clearRect(0, 0, state.size, state.size);
+      state.unfolded = false;
+      document.getElementById("toggleView").textContent = "展开作品";
+      setFeedback("折叠态：只在红色折纸片里剪");
+      endCut();
+      render();
+    }
+
+    function setFeedback(text, color = "rgba(15, 130, 119, 0.94)") {
+      feedback.textContent = text;
+      feedback.style.background = color;
+    }
+
+    function saveImage() {
+      const old = state.unfolded;
+      if (!old) {
+        state.unfolded = true;
+        render();
+      }
+      const link = document.createElement("a");
+      link.download = `jianzhi-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.png`;
+      link.href = paperCanvas.toDataURL("image/png");
+      link.click();
+      if (!old) {
+        state.unfolded = false;
+        render();
+      }
+    }
+
+    function saveState() {
+      const snapshot = document.createElement("canvas");
+      snapshot.width = state.size;
+      snapshot.height = state.size;
+      snapshot.getContext("2d").drawImage(state.cutCanvas, 0, 0);
+      state.history.push({
+        cuts: snapshot,
+        foldCount: state.foldCount,
+        brushSize: state.brushSize
+      });
+      state.historyIndex = state.history.length - 1;
+      drawHistory();
+    }
+
+    function loadState(index) {
+      const item = state.history[index];
+      if (!item) return;
+      cutCtx.clearRect(0, 0, state.size, state.size);
+      cutCtx.drawImage(item.cuts, 0, 0, state.size, state.size);
+      state.foldCount = item.foldCount;
+      state.brushSize = item.brushSize;
+      state.historyIndex = index;
+      document.getElementById("foldCount").value = String(item.foldCount);
+      document.getElementById("brushSize").value = String(item.brushSize);
+      document.getElementById("brushValue").textContent = item.brushSize;
+      render();
+      drawHistory();
+    }
+
+    function drawHistory() {
+      const history = document.getElementById("history");
+      history.innerHTML = "";
+      if (!state.history.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "还没有保存的状态";
+        history.appendChild(empty);
+        return;
+      }
+      state.history.forEach((item, index) => {
+        const button = document.createElement("button");
+        button.className = `thumb${index === state.historyIndex ? " active" : ""}`;
+        button.title = "载入这个状态";
+        button.addEventListener("click", () => loadState(index));
+
+        const preview = document.createElement("canvas");
+        preview.width = 78;
+        preview.height = 78;
+        const pctx = preview.getContext("2d");
+        const full = document.createElement("canvas");
+        full.width = state.size;
+        full.height = state.size;
+        const fctx = full.getContext("2d");
+        const c = center();
+        fctx.fillStyle = "#d62727";
+        fctx.beginPath();
+        fctx.arc(c.x, c.y, radius(), 0, Math.PI * 2);
+        fctx.fill();
+        fctx.globalCompositeOperation = "destination-out";
+        for (let i = 0; i < item.foldCount; i += 1) {
+          const angle = (Math.PI * 2) / item.foldCount;
+          fctx.save();
+          fctx.translate(c.x, c.y);
+          if (i % 2 === 0) {
+            fctx.rotate(i * angle);
+          } else {
+            const mirrorAxis = foldStartAngle() + ((i + 1) * angle) / 2;
+            fctx.rotate(mirrorAxis);
+            fctx.scale(1, -1);
+            fctx.rotate(-mirrorAxis);
+          }
+          fctx.translate(-c.x, -c.y);
+          fctx.drawImage(item.cuts, 0, 0);
+          fctx.restore();
+        }
+        fctx.globalCompositeOperation = "source-over";
+        pctx.drawImage(full, 0, 0, 78, 78);
+        button.appendChild(preview);
+
+        const del = document.createElement("span");
+        del.className = "delete";
+        del.textContent = "x";
+        del.addEventListener("click", event => {
+          event.stopPropagation();
+          state.history.splice(index, 1);
+          state.historyIndex = Math.min(state.historyIndex, state.history.length - 1);
+          drawHistory();
+        });
+        button.appendChild(del);
+        history.appendChild(button);
+      });
+    }
+
+    function explainGestureError(error) {
+      const message = String(error && (error.message || error.name) || error);
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        return "这个浏览器不支持摄像头访问。请用 Chrome/Edge 打开，或上传到 GitHub Pages 后再试。";
+      }
+      if (message.includes("Permission") || message.includes("NotAllowed")) {
+        return "摄像头权限被拒绝了。请在浏览器地址栏允许摄像头，然后重新开启手势模式。";
+      }
+      if (message.includes("NotFound") || message.includes("DevicesNotFound")) {
+        return "没有找到可用摄像头。请确认摄像头已连接且没有被其他软件占用。";
+      }
+      if (message.includes("Failed to fetch") || message.includes("Network") || message.includes("cdn") || message.includes("googleapis")) {
+        return "AI 手势模型没有加载成功。手势模式需要联网；上传到 GitHub Pages 后再打开会更稳定。";
+      }
+      return "手势模式启动失败。请先用鼠标/触控模式，或上传到 GitHub Pages 后再试。";
+    }
+
+    async function createHandLandmarker(HandLandmarker, vision) {
+      const options = delegate => ({
+        baseOptions: {
+          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+          delegate
+        },
+        runningMode: "VIDEO",
+        numHands: 1
+      });
+      try {
+        return await HandLandmarker.createFromOptions(vision, options("GPU"));
+      } catch (error) {
+        console.warn("GPU hand model failed, retrying with CPU.", error);
+        return await HandLandmarker.createFromOptions(vision, options("CPU"));
+      }
+    }
+
+    async function toggleGesture() {
+      state.gestureEnabled = !state.gestureEnabled;
+      const button = document.getElementById("toggleGesture");
+      if (!state.gestureEnabled) {
+        stopGesture();
+        button.textContent = "手势模式";
+        setFeedback("折叠态：只在红色折纸片里剪");
+        return;
+      }
+      state.unfolded = false;
+      document.getElementById("toggleView").textContent = "展开作品";
+      render();
+      button.textContent = "关闭手势";
+      setFeedback("正在加载手势识别模型...", "rgba(35, 93, 166, 0.9)");
+      try {
+        if (!state.handLandmarker) {
+          const { FilesetResolver, HandLandmarker } = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/+esm");
+          const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/wasm");
+          state.handLandmarker = await createHandLandmarker(HandLandmarker, vision);
+        }
+        setFeedback("请允许摄像头权限...", "rgba(35, 93, 166, 0.9)");
+        video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+        await video.play();
+        setFeedback("手势模式：在折纸片里捏合剪纸", "rgba(35, 93, 166, 0.9)");
+        gestureLoop();
+      } catch (error) {
+        console.error(error);
+        state.gestureEnabled = false;
+        button.textContent = "手势模式";
+        setFeedback(explainGestureError(error), "rgba(176, 43, 43, 0.92)");
+      }
+    }
+
+    function stopGesture() {
+      state.gestureEnabled = false;
+      endCut();
+      overlayCtx.clearRect(0, 0, state.size, state.size);
+      if (video.srcObject) {
+        video.srcObject.getTracks().forEach(track => track.stop());
+        video.srcObject = null;
+      }
+    }
+
+    function gestureLoop() {
+      if (!state.gestureEnabled || !state.handLandmarker) return;
+      const results = state.handLandmarker.detectForVideo(video, Date.now());
+      if (results.landmarks && results.landmarks[0]) {
+        const hand = results.landmarks[0];
+        const indexTip = hand[8];
+        const thumbTip = hand[4];
+        state.target.x = (1 - indexTip.x) * state.size;
+        state.target.y = indexTip.y * state.size;
+        state.cursor.x += (state.target.x - state.cursor.x) * 0.28;
+        state.cursor.y += (state.target.y - state.cursor.y) * 0.28;
+        const pinching = Math.hypot(indexTip.x - thumbTip.x, indexTip.y - thumbTip.y) < 0.055;
+        if (pinching && insideFoldedPaper(state.cursor.x, state.cursor.y)) {
+          if (!state.cutting) startCut({ x: state.cursor.x, y: state.cursor.y });
+          cutAt(state.cursor.x, state.cursor.y);
+          setFeedback("正在剪折叠纸片", "rgba(214, 39, 39, 0.92)");
+        } else {
+          endCut();
+          setFeedback(pinching ? "手要移到红色折纸片里" : "移动手指，捏合开始剪纸", "rgba(35, 93, 166, 0.9)");
+        }
+        drawGestureCursor(state.cursor.x, state.cursor.y, pinching);
+      } else {
+        endCut();
+        overlayCtx.clearRect(0, 0, state.size, state.size);
+        setFeedback("没有检测到手，请把手放入摄像头画面", "rgba(35, 93, 166, 0.9)");
+      }
+      requestAnimationFrame(gestureLoop);
+    }
+
+    function drawGestureCursor(x, y, active) {
+      overlayCtx.clearRect(0, 0, state.size, state.size);
+      overlayCtx.beginPath();
+      overlayCtx.arc(x, y, active ? 14 : 8, 0, Math.PI * 2);
+      overlayCtx.fillStyle = active ? "#f1c15b" : "rgba(255,255,255,0.9)";
+      overlayCtx.fill();
+      overlayCtx.lineWidth = 2;
+      overlayCtx.strokeStyle = active ? "#971717" : "#2c1b17";
+      overlayCtx.stroke();
+    }
+
+    paperCanvas.addEventListener("pointerdown", event => {
+      if (state.gestureEnabled) return;
+      event.preventDefault();
+      paperCanvas.setPointerCapture(event.pointerId);
+      startCut(pointFromEvent(event));
+    });
+
+    paperCanvas.addEventListener("pointermove", event => {
+      if (state.gestureEnabled || !state.cutting) return;
+      event.preventDefault();
+      const point = pointFromEvent(event);
+      cutAt(point.x, point.y);
+    });
+
+    paperCanvas.addEventListener("pointerup", endCut);
+    paperCanvas.addEventListener("pointercancel", endCut);
+    paperCanvas.addEventListener("pointerleave", endCut);
+
+    document.getElementById("foldCount").addEventListener("change", event => {
+      state.foldCount = Number(event.target.value);
+      cutCtx.clearRect(0, 0, state.size, state.size);
+      state.unfolded = false;
+      document.getElementById("toggleView").textContent = "展开作品";
+      setFeedback("展开瓣数已改变，请在新的折纸片上剪");
+      render();
+    });
+
+    document.getElementById("brushSize").addEventListener("input", event => {
+      state.brushSize = Number(event.target.value);
+      document.getElementById("brushValue").textContent = state.brushSize;
+    });
+
+    document.getElementById("toggleView").addEventListener("click", event => {
+      state.unfolded = !state.unfolded;
+      event.currentTarget.textContent = state.unfolded ? "折回继续剪" : "展开作品";
+      setFeedback(state.unfolded ? "展开态：剪口已按折线翻开" : "折叠态：只在红色折纸片里剪");
+      render();
+    });
+
+    document.getElementById("reset").addEventListener("click", resetPaper);
+    document.getElementById("saveImage").addEventListener("click", saveImage);
+    document.getElementById("saveState").addEventListener("click", saveState);
+    document.getElementById("clearHistory").addEventListener("click", () => {
+      state.history = [];
+      state.historyIndex = -1;
+      drawHistory();
+    });
+    document.getElementById("toggleGesture").addEventListener("click", toggleGesture);
+
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+    drawHistory();
+  </script>
+</body>
+</html>
